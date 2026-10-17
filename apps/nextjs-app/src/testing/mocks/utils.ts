@@ -3,20 +3,24 @@ import { delay } from 'msw';
 
 import { db } from './db';
 
-export const encode = (obj: any) => {
-  const btoa =
-    typeof window === 'undefined'
-      ? (str: string) => Buffer.from(str, 'binary').toString('base64')
-      : window.btoa;
-  return btoa(JSON.stringify(obj));
-};
+// Server-side opaque token store (mock/test only): token → userId.
+// Tokens are cryptographically random and cannot be forged by constructing
+// a Base64-encoded payload.
+const tokenStore = new Map<string, string>();
 
-export const decode = (str: string) => {
-  const atob =
-    typeof window === 'undefined'
-      ? (str: string) => Buffer.from(str, 'base64').toString('binary')
-      : window.atob;
-  return JSON.parse(atob(str));
+const generateToken = (): string => {
+  const bytes = new Uint8Array(32);
+  if (typeof window === 'undefined') {
+    // Node.js: synchronous random bytes
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('crypto') as typeof import('crypto')).randomFillSync(bytes);
+  } else {
+    // Browser (MSW service worker)
+    window.crypto.getRandomValues(bytes);
+  }
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 };
 
 export const hash = (str: string) => {
@@ -67,8 +71,9 @@ export function authenticate({
 
   if (user?.password === hash(password)) {
     const sanitizedUser = sanitizeUser(user);
-    const encodedToken = encode(sanitizedUser);
-    return { user: sanitizedUser, jwt: encodedToken };
+    const token = generateToken();
+    tokenStore.set(token, user.id);
+    return { user: sanitizedUser, jwt: token };
   }
 
   const error = new Error('Invalid username or password');
@@ -79,16 +84,20 @@ export const AUTH_COOKIE = `bulletproof_react_app_token`;
 
 export function requireAuth(cookies: Record<string, string>) {
   try {
-    const encodedToken = cookies[AUTH_COOKIE] || Cookies.get(AUTH_COOKIE);
-    if (!encodedToken) {
+    const token = cookies[AUTH_COOKIE] || Cookies.get(AUTH_COOKIE);
+    if (!token) {
       return { error: 'Unauthorized', user: null };
     }
-    const decodedToken = decode(encodedToken) as { id: string };
+
+    const userId = tokenStore.get(token);
+    if (!userId) {
+      return { error: 'Unauthorized', user: null };
+    }
 
     const user = db.user.findFirst({
       where: {
         id: {
-          equals: decodedToken.id,
+          equals: userId,
         },
       },
     });
