@@ -1,6 +1,7 @@
 import { ContentLayout } from '@/components/layouts/content-layout';
+import { getUser } from '@/lib/auth';
+import { canViewUsers } from '@/lib/authorization';
 
-import { AdminGuard } from './_components/admin-guard';
 import { Users } from './_components/users';
 
 export const metadata = {
@@ -8,12 +9,20 @@ export const metadata = {
   description: 'Users',
 };
 
-const UsersPage = () => {
+const UsersPage = async () => {
+  const user = await getUser();
+
+  if (!canViewUsers(user)) {
+    return (
+      <ContentLayout title="Users">
+        <div>Only admin can view this.</div>
+      </ContentLayout>
+    );
+  }
+
   return (
     <ContentLayout title="Users">
-      <AdminGuard>
-        <Users />
-      </AdminGuard>
+      <Users />
     </ContentLayout>
   );
 };

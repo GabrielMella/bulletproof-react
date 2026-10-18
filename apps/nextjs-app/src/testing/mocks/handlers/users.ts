@@ -26,6 +26,7 @@ export const usersHandlers = [
       if (error) {
         return HttpResponse.json({ message: error }, { status: 401 });
       }
+      requireAdmin(user);
       const result = db.user
         .findMany({
           where: {
