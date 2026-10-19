@@ -3,21 +3,8 @@ import { delay } from 'msw';
 
 import { db } from './db';
 
-export const encode = (obj: any) => {
-  const btoa =
-    typeof window === 'undefined'
-      ? (str: string) => Buffer.from(str, 'binary').toString('base64')
-      : window.btoa;
-  return btoa(JSON.stringify(obj));
-};
-
-export const decode = (str: string) => {
-  const atob =
-    typeof window === 'undefined'
-      ? (str: string) => Buffer.from(str, 'base64').toString('binary')
-      : window.atob;
-  return JSON.parse(atob(str));
-};
+// Fixed secret used only in the mock server. Not used in production.
+const MOCK_TOKEN_SECRET = 'mock-secret-do-not-use-in-production';
 
 export const hash = (str: string) => {
   let hash = 5381,
@@ -27,6 +14,29 @@ export const hash = (str: string) => {
     hash = (hash * 33) ^ str.charCodeAt(--i);
   }
   return String(hash >>> 0);
+};
+
+export const encode = (obj: any) => {
+  const btoa =
+    typeof window === 'undefined'
+      ? (str: string) => Buffer.from(str, 'binary').toString('base64')
+      : window.btoa;
+  const payload = btoa(JSON.stringify(obj));
+  const signature = hash(payload + MOCK_TOKEN_SECRET);
+  return `${payload}.${signature}`;
+};
+
+export const decode = (str: string) => {
+  const atob =
+    typeof window === 'undefined'
+      ? (str: string) => Buffer.from(str, 'base64').toString('binary')
+      : window.atob;
+  const dotIndex = str.lastIndexOf('.');
+  if (dotIndex === -1) throw new Error('Invalid token format');
+  const payload = str.slice(0, dotIndex);
+  const sig = str.slice(dotIndex + 1);
+  if (sig !== hash(payload + MOCK_TOKEN_SECRET)) throw new Error('Invalid token signature');
+  return JSON.parse(atob(payload));
 };
 
 export const networkDelay = () => {
