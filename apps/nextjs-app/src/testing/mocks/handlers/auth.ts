@@ -97,8 +97,7 @@ export const authHandlers = [
 
       return HttpResponse.json(result, {
         headers: {
-          // with a real API servier, the token cookie should also be Secure and HttpOnly
-          'Set-Cookie': `${AUTH_COOKIE}=${result.jwt}; Path=/;`,
+          'Set-Cookie': `${AUTH_COOKIE}=${result.jwt}; Path=/; HttpOnly; Secure`,
         },
       });
     } catch (error: any) {
@@ -121,8 +120,7 @@ export const authHandlers = [
 
       return HttpResponse.json(result, {
         headers: {
-          // with a real API servier, the token cookie should also be Secure and HttpOnly
-          'Set-Cookie': `${AUTH_COOKIE}=${result.jwt}; Path=/;`,
+          'Set-Cookie': `${AUTH_COOKIE}=${result.jwt}; Path=/; HttpOnly; Secure`,
         },
       });
     } catch (error: any) {
@@ -143,7 +141,7 @@ export const authHandlers = [
       { message: 'Logged out' },
       {
         headers: {
-          'Set-Cookie': `${AUTH_COOKIE}=; Path=/;`,
+          'Set-Cookie': `${AUTH_COOKIE}=; Path=/; HttpOnly; Secure`,
         },
       },
     );
