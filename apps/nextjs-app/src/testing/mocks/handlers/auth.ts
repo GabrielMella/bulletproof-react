@@ -81,13 +81,13 @@ export const authHandlers = [
       db.user.create({
         ...userObject,
         role,
-        password: hash(userObject.password),
+        password: await hash(userObject.password),
         teamId,
       });
 
       await persistDb('user');
 
-      const result = authenticate({
+      const result = await authenticate({
         email: userObject.email,
         password: userObject.password,
       });
@@ -114,7 +114,7 @@ export const authHandlers = [
 
     try {
       const credentials = (await request.json()) as LoginBody;
-      const result = authenticate(credentials);
+      const result = await authenticate(credentials);
 
       // todo: remove once tests in Github Actions are fixed
       Cookies.set(AUTH_COOKIE, result.jwt, { path: '/' });

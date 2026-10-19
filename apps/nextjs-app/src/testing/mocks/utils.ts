@@ -19,14 +19,15 @@ export const decode = (str: string) => {
   return JSON.parse(atob(str));
 };
 
-export const hash = (str: string) => {
-  let hash = 5381,
-    i = str.length;
-
-  while (i) {
-    hash = (hash * 33) ^ str.charCodeAt(--i);
+export const hash = async (str: string): Promise<string> => {
+  if (typeof window === 'undefined') {
+    const { createHash } = await import('crypto');
+    return createHash('sha256').update(str).digest('hex');
   }
-  return String(hash >>> 0);
+  const msgBuffer = new TextEncoder().encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
 export const networkDelay = () => {
@@ -50,7 +51,7 @@ const omit = <T extends object>(obj: T, keys: string[]): T => {
 export const sanitizeUser = <O extends object>(user: O) =>
   omit<O>(user, ['password', 'iat']);
 
-export function authenticate({
+export async function authenticate({
   email,
   password,
 }: {
@@ -65,7 +66,7 @@ export function authenticate({
     },
   });
 
-  if (user?.password === hash(password)) {
+  if (user?.password === (await hash(password))) {
     const sanitizedUser = sanitizeUser(user);
     const encodedToken = encode(sanitizedUser);
     return { user: sanitizedUser, jwt: encodedToken };

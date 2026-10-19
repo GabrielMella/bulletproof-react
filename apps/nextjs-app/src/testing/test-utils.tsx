@@ -26,7 +26,7 @@ export const waitForLoadingToFinish = () =>
 
 export const createUser = async (userProperties?: any) => {
   const user = generateUser(userProperties) as any;
-  await db.user.create({ ...user, password: hash(user.password) });
+  await db.user.create({ ...user, password: await hash(user.password) });
   return user;
 };
 
